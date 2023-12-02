@@ -21,6 +21,7 @@ fn(1)
     console.log(value)
     throw Error("error")
   })
+
 // .catch(err => {
 //   console.log(err)
 //   return fn(err + "1")
