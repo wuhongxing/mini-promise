@@ -10,16 +10,11 @@ const isPromise = value => {
 
 Promise.prototype.resolve = value => {
   if (isPromise(value)) return value
-  return value
+  return new Promise(resolve => resolve(value))
 }
 
-Promise.resolve(
-  new Promise((resolve, reject) => {
-    setTimeout(() => {
-      console.log("1")
-      resolve(100)
-    }, 1000)
-  })
-).then(res => {
+console.log(1)
+Promise.resolve(10).then(res => {
   console.log(res)
 })
+console.log(2)

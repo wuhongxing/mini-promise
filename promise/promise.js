@@ -2,6 +2,7 @@ const PENDING = "pending"
 const FULFILLED = "fulfilled"
 const REJECTED = "rejected"
 
+// 处理嵌套 promise
 function resolvePromise(promise, x, resolve, reject) {
   if (promise === x) {
     return reject(new TypeError("Chaining cycle detected for promise"))
@@ -35,6 +36,21 @@ function resolvePromise(promise, x, resolve, reject) {
     }
   } else {
     resolve(x)
+  }
+}
+
+function runMicroTask(fn) {
+  if (typeof global.nextTick === "function") {
+    global.nextTick(fn)
+  } else if (typeof MutationObserver === "function") {
+    const help = document.createElement("div")
+    const ob = new MutationObserver(fn)
+    ob.observe(help, { attributes: true })
+
+    // Trigger the observer by modifying the attributes of the div.
+    help.setAttribute("data-mutation-observer", "trigger")
+  } else {
+    setTimeout(fn, 0)
   }
 }
 
@@ -78,48 +94,36 @@ class Promise {
           }
 
     const promise = new Promise((resolve, reject) => {
-      if (this.status === FULFILLED) {
+      const handleFulfilled = () => {
         // 不可以放到同一上下文中，不然的话 promise 也无法读取到
-        setTimeout(() => {
+        runMicroTask(() => {
           try {
             const x = onfulfilled(this.value)
             resolvePromise(promise, x, resolve, reject)
           } catch (error) {
             reject(error)
           }
-        }, 0)
+        })
       }
-      if (this.status === REJECTED) {
-        setTimeout(() => {
+      const handleRejected = () => {
+        runMicroTask(() => {
           try {
             const x = onrejected(this.reason)
             resolvePromise(promise, x, resolve, reject)
           } catch (error) {
             reject(error)
           }
-        }, 0)
+        })
+      }
+      if (this.status === FULFILLED) {
+        handleFulfilled()
+      }
+      if (this.status === REJECTED) {
+        handleRejected()
       }
       if (this.status === PENDING) {
-        this.onFulfilledCallbacks.push(() =>
-          setTimeout(() => {
-            try {
-              const x = onfulfilled(this.value)
-              resolvePromise(promise, x, resolve, reject)
-            } catch (error) {
-              reject(error)
-            }
-          }, 0)
-        )
-        this.onRejectedCallbacks.push(() => {
-          setTimeout(() => {
-            try {
-              const x = onrejected(this.reason)
-              resolvePromise(promise, x, resolve, reject)
-            } catch (error) {
-              reject(error)
-            }
-          }, 0)
-        })
+        this.onFulfilledCallbacks.push(handleFulfilled)
+        this.onRejectedCallbacks.push(handleRejected)
       }
     })
     return promise

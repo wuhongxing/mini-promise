@@ -2,8 +2,8 @@ const promise = new Promise((resolve, reject) => {
   resolve("hello world")
 })
 
-Promise.prototype.finally = cb => {
-  return promise.then(
+Promise.prototype.finally = function (cb) {
+  return this.then(
     res => {
       return Promise.resolve(cb()).then(() => res)
     },
